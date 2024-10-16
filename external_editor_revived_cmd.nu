@@ -49,7 +49,9 @@ def main [path: string] {
   let body = $obj.body
   mut markdown = (
     $body
-    | markdownify --bullets '-'
+    | markdownify
+      --heading-style 'atx'
+      --bullets '-'
     | str trim
   )
   mut contents_md = $eml.headers + "\n\n" + $"<pre>\n($markdown)\n</pre>"
