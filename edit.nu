@@ -19,6 +19,9 @@ const HTML_SUFFIX = '</body></html>'
 const REPLY_PREFIX = '<div class="moz-cite-prefix">'
 const FORWARDED_PREFIX = '<div class="moz-forward-container">'
 
+const MD_START = '<pre><code class="language-md">'
+const MD_END = '</code></pre>'
+
 def find_split [body: string, needle: string, suffix: string] -> Record {
   let i = $body | str index-of $needle
   if $i == -1 {
@@ -38,16 +41,16 @@ def split_forwarded [body: string] -> Record {
 }
 
 def add_md [s: string, md: string] -> str {
-  $"($s)\n\n<pre>\n($md)\n</pre>"
+  $"($s)\n\n($MD_START)\n($md)\n($MD_END)"
 }
 
 def remove_reply_md [body: string] -> str {
-  let reply_index = $body | str index-of $"\n\n<pre>\nOn "
+  let reply_index = $body | str index-of $"\n\n($MD_START)\nOn "
   $body | str substring ..<$reply_index
 }
 
 def remove_forwarded_md [body: string] -> str {
-  let forwarded_index = $body | str index-of "\n\n<pre>\n-------- Forwarded Message --------"
+  let forwarded_index = $body | str index-of $"\n\n($MD_START)\n-------- Forwarded Message --------"
   $body | str substring ..<$forwarded_index
 }
 
@@ -111,7 +114,7 @@ def main [path: string] {
   }
 
   mut html = $eml.body
-    | str substring 6..<-6  # Strip `<pre></pre>`
+    | str substring ($MD_START | str length)..<(($eml.body | str length) - ($MD_END | str length))
     | markdown_py --output_format=html
   if $reply_html != '' {
     $html = $html + $eml_split_reply.rest
