@@ -17,9 +17,7 @@ const HTML_PREFIX = [
 const HTML_SUFFIX = '</body></html>'
 
 const REPLY_PREFIX = '<div class="moz-cite-prefix">'
-
 const FORWARDED_PREFIX = '<div class="moz-forward-container">'
-const FORWARDED_SUFFIX = '</div>'
 
 def find_split [body: string, needle: string, suffix: string] -> Record {
   let i = $body | str index-of $needle
