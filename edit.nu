@@ -41,12 +41,8 @@ def add_md [s: string, md: string] -> str {
   $"($s)\n\n<pre>\n($md)\n</pre>"
 }
 
-def add_forward [s: string, forward: string] -> str {
-  $"($s)\n\n($forward)"
-}
-
-def remove_reply_html [body: string] -> str {
-  let reply_index = $body | str index-of $"\n\n($REPLY_PREFIX)"
+def remove_reply_md [body: string] -> str {
+  let reply_index = $body | str index-of $"\n\n<pre>\nOn "
   $body | str substring ..<$reply_index
 }
 
@@ -96,7 +92,8 @@ def main [path: string] {
 
   mut contents_md = add_md $eml.headers $body_md
   if $reply_html != '' {
-    $contents_md = add_forward $contents_md $reply_html
+    let reply_md = $reply_html | to_markdown
+    $contents_md = add_md $contents_md $reply_md
   } else if $forwarded_md != '' {
     $contents_md = add_md $contents_md $forwarded_md
   }
@@ -108,7 +105,7 @@ def main [path: string] {
 
   mut eml = split_eml $path
   if $reply_html != '' {
-    $eml.body = remove_reply_html $eml.body
+    $eml.body = remove_reply_md $eml.body
   } else if $forwarded_md != '' {
     $eml.body = remove_forwarded_md $eml.body
   }
