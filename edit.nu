@@ -19,7 +19,7 @@ const HTML_SUFFIX = '</body></html>'
 const FORWARDED_PREFIX = '<div class="moz-forward-container">'
 const FORWARDED_SUFFIX = '</div>'
 
-def remove_forwarded [body: string] -> Record {
+def split_forwarded [body: string] -> Record {
   let i = $body | str index-of $FORWARDED_PREFIX
   if $i == -1 {
     return { forwarded: null, body: $body }
@@ -29,12 +29,13 @@ def remove_forwarded [body: string] -> Record {
   { forwarded: $forwarded, body: $body }
 }
 
-def remove_forwarded_md [body: string, forwarded: string] -> str {
-  $body | str substring ..<(($body | str length) - ($forwarded | str length) - 2)
+def add_md [s: string, md: string] -> str {
+  $"($s)\n\n<pre>\n($md)\n</pre>"
 }
 
-def add_forwarded_md [body: string, forwarded: string] -> str {
-  $"($body)\n\n($forwarded)"
+def remove_forwarded_md [body: string] -> str {
+  let forwarded_index = $body | str index-of "\n\n<pre>\n-------- Forwarded Message --------"
+  $body | str substring ..<$forwarded_index
 }
 
 def join_eml [headers: string, body: string] -> str {
@@ -42,21 +43,33 @@ def join_eml [headers: string, body: string] -> str {
   $headers + "\n\n" + $html
 }
 
-def main [path: string] {
-  let eml = split_eml $path
-  let obj = remove_forwarded $eml.body
-  let forwarded = $obj.forwarded
-  let body = $obj.body
-  mut markdown = (
-    $body
+def to_markdown [] -> str {
+  (
+    $in
     | markdownify
       --heading-style 'atx'
       --bullets '-'
+      --keep-inline-images-in
     | str trim
   )
-  mut contents_md = $eml.headers + "\n\n" + $"<pre>\n($markdown)\n</pre>"
-  if $forwarded != null {
-    $contents_md = add_forwarded_md $contents_md $forwarded
+}
+
+def main [path: string] {
+  let eml = split_eml $path
+  let eml_split = split_forwarded $eml.body
+
+  mut body_md = $eml_split.body | to_markdown
+  mut forwarded_md = ''  # Don't use `null` to satisfy LSP
+  if $eml_split.forwarded != null {
+    $forwarded_md = $eml_split.forwarded | to_markdown
+    # Tidy up
+    $forwarded_md = $forwarded_md
+      | str replace '\-\-\-\-\-\-\-\- Forwarded Message \-\-\-\-\-\-\-\-' '-------- Forwarded Message --------'
+  }
+  mut contents_md = add_md $eml.headers $body_md
+
+  if $forwarded_md != '' {
+    $contents_md = add_md $contents_md $forwarded_md
   }
   $contents_md | save --force $path
 
@@ -65,15 +78,15 @@ def main [path: string] {
   tail --pid $pid --follow /dev/null
 
   mut eml = split_eml $path
-  if $forwarded != null {
-    $eml.body = remove_forwarded_md $eml.body $forwarded
+  if $forwarded_md != '' {
+    $eml.body = remove_forwarded_md $eml.body
   }
 
   mut html = $eml.body
     | str substring 6..<-6  # Strip `<pre></pre>`
     | markdown_py --output_format=html
-  if $forwarded != null {
-    $html = $html + $forwarded
+  if $forwarded_md != '' {
+    $html = $html + $eml_split.forwarded
   }
   join_eml $eml.headers $html | save --force $path
 }
