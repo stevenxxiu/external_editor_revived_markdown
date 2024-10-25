@@ -84,7 +84,7 @@ def main [path: string] {
     $forwarded_md = $eml_split_forward.rest | html_to_md
     # Tidy up
     $forwarded_md = $forwarded_md
-      | str replace '\-\-\-\-\-\-\-\- Forwarded Message \-\-\-\-\-\-\-\-' '-------- Forwarded Message --------'
+      | str replace "  \n  \n\\-------- Forwarded Message --------" '-------- Forwarded Message --------'
   } else if $eml_split_reply.rest != null {
     $body_md = $eml_split_reply.body | html_to_md
     $reply_html = $eml_split_reply.rest
