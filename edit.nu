@@ -59,15 +59,12 @@ def join_eml [headers: string, body: string] -> str {
   $headers + "\n\n" + $html
 }
 
-def to_markdown [] -> str {
-  (
-    $in
-    | markdownify
-      --heading-style 'atx'
-      --bullets '-'
-      --keep-inline-images-in
-    | str trim
-  )
+def html_to_md [] -> str {
+  $in | node $'($env.FILE_PWD)/html_to_md.js'
+}
+
+def md_to_html [] -> str {
+  $in | $'($env.FILE_PWD)/.bin/marked'
 }
 
 def main [path: string] {
@@ -83,19 +80,19 @@ def main [path: string] {
   mut forwarded_md = ''
   mut reply_html = ''
   if $eml_split_forward.rest != null {
-    $body_md = $eml_split_forward.body | to_markdown
-    $forwarded_md = $eml_split_forward.rest | to_markdown
+    $body_md = $eml_split_forward.body | html_to_md
+    $forwarded_md = $eml_split_forward.rest | html_to_md
     # Tidy up
     $forwarded_md = $forwarded_md
       | str replace '\-\-\-\-\-\-\-\- Forwarded Message \-\-\-\-\-\-\-\-' '-------- Forwarded Message --------'
   } else if $eml_split_reply.rest != null {
-    $body_md = $eml_split_reply.body | to_markdown
+    $body_md = $eml_split_reply.body | html_to_md
     $reply_html = $eml_split_reply.rest
   }
 
   mut contents_md = add_md $eml.headers $body_md
   if $reply_html != '' {
-    let reply_md = $reply_html | to_markdown
+    let reply_md = $reply_html | html_to_md
     $contents_md = add_md $contents_md $reply_md
   } else if $forwarded_md != '' {
     $contents_md = add_md $contents_md $forwarded_md
