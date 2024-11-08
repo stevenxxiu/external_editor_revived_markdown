@@ -19,8 +19,8 @@ const HTML_SUFFIX = '</body></html>'
 const REPLY_PREFIX = '<div class="moz-cite-prefix">'
 const FORWARDED_PREFIX = '<div class="moz-forward-container">'
 
-const MD_START = '<pre><code class="language-md">'
-const MD_END = '</code></pre>'
+const MD_REPLY_PREFIX = "<!-- Original message -->"
+const MD_FORWARDED_PREFIX = "<!-- Forwarded message -->"
 
 def find_split [body: string, needle: string, suffix: string] -> Record {
   let i = $body | str index-of $needle
@@ -40,18 +40,12 @@ def split_forwarded [body: string] -> Record {
   find_split $body $FORWARDED_PREFIX $HTML_SUFFIX
 }
 
-def add_md [s: string, md: string] -> str {
-  $"($s)\n\n($MD_START)\n($md)\n($MD_END)"
-}
-
-def remove_reply_md [body: string] -> str {
-  let reply_index = $body | str index-of $"\n\n($MD_START)\nOn "
-  $body | str substring ..<$reply_index
-}
-
-def remove_forwarded_md [body: string] -> str {
-  let forwarded_index = $body | str index-of $"\n\n($MD_START)\n-------- Forwarded Message --------"
-  $body | str substring ..<$forwarded_index
+def remove_md [body: string, prefix: string] -> str {
+  let index = $body | str index-of $prefix
+  if $index == 0 {
+    return ''
+  }
+  $body | str substring ..<$index
 }
 
 def join_eml [headers: string, body: string] -> str {
@@ -84,18 +78,18 @@ def main [path: string] {
     $forwarded_md = $eml_split_forward.rest | html_to_md
     # Tidy up
     $forwarded_md = $forwarded_md
-      | str replace "  \n  \n\\-------- Forwarded Message --------" '-------- Forwarded Message --------'
+      | str replace "  \n  \n\\-------- Forwarded Message --------" ''
   } else if $eml_split_reply.rest != null {
     $body_md = $eml_split_reply.body | html_to_md
     $reply_html = $eml_split_reply.rest
   }
 
-  mut contents_md = add_md $eml.headers $body_md
+  mut contents_md = $"($eml.headers)\n\n($body_md)"
   if $reply_html != '' {
     let reply_md = $reply_html | html_to_md
-    $contents_md = add_md $contents_md $reply_md
+    $contents_md = $"($contents_md)\n\n($MD_REPLY_PREFIX)\n\n($reply_md)"
   } else if $forwarded_md != '' {
-    $contents_md = add_md $contents_md $forwarded_md
+    $contents_md = $"($contents_md)\n\n($MD_FORWARDED_PREFIX)\n\n($forwarded_md)"
   }
   $contents_md | save --force $path
 
@@ -105,13 +99,13 @@ def main [path: string] {
 
   mut eml = split_eml $path
   if $reply_html != '' {
-    $eml.body = remove_reply_md $eml.body
+    $eml.body = remove_md $eml.body $MD_REPLY_PREFIX
   } else if $forwarded_md != '' {
-    $eml.body = remove_forwarded_md $eml.body
+    $eml.body = remove_md $eml.body $MD_FORWARDED_PREFIX
   }
 
   mut html = $eml.body
-    | str substring ($MD_START | str length)..<(($eml.body | str length) - ($MD_END | str length))
+    | str substring ..<($eml.body | str length)
     | markdown_py --output_format=html
   if $reply_html != '' {
     $html = $html + $eml_split_reply.rest
