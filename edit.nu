@@ -1,5 +1,5 @@
 #!/usr/bin/nu
-def split_eml [path: string] -> Record {
+def split_eml [path: string]: nothing -> record {
   let contents = open --raw $path | str replace --all "\r\n" "\n"
   let headers_len = $contents | str index-of "\n\n"
   let body_offset = $headers_len + 2
@@ -22,7 +22,7 @@ const FORWARDED_PREFIX = '<div class="moz-forward-container">'
 const MD_REPLY_PREFIX = "<!-- Original message -->"
 const MD_FORWARDED_PREFIX = "<!-- Forwarded message -->"
 
-def find_split [body: string, needle: string, suffix: string] -> Record {
+def find_split [body: string, needle: string, suffix: string]: nothing -> record {
   let i = $body | str index-of $needle
   if $i == -1 {
     return { body: $body, rest: null }
@@ -32,15 +32,15 @@ def find_split [body: string, needle: string, suffix: string] -> Record {
   { body: $body, rest: $forwarded }
 }
 
-def split_reply [body: string] -> Record {
+def split_reply [body: string]: nothing -> record {
   find_split $body $REPLY_PREFIX $HTML_SUFFIX
 }
 
-def split_forwarded [body: string] -> Record {
+def split_forwarded [body: string]: nothing -> record {
   find_split $body $FORWARDED_PREFIX $HTML_SUFFIX
 }
 
-def remove_md [body: string, prefix: string] -> str {
+def remove_md [body: string, prefix: string]: nothing -> string {
   let index = $body | str index-of $prefix
   if $index == 0 {
     return ''
@@ -48,16 +48,16 @@ def remove_md [body: string, prefix: string] -> str {
   $body | str substring ..<$index
 }
 
-def join_eml [headers: string, body: string] -> str {
+def join_eml [headers: string, body: string]: nothing -> string {
   let html = $HTML_PREFIX + $body + $HTML_SUFFIX
   $headers + "\n\n" + $html
 }
 
-def html_to_md [] -> str {
+def html_to_md []: string -> string {
   $in | node $'($env.FILE_PWD)/html_to_md.js'
 }
 
-def md_to_html [] -> str {
+def md_to_html []: string -> string {
   $in | $'($env.FILE_PWD)/.bin/marked'
 }
 
