@@ -1,0 +1,14 @@
+[External Editor Revived Markdown.
+Scriptation to convertation to and from]
+·Markdown when editing.
+Set up👾
+To installitation
+ pnpm installitation
+ Requirements
+- Scripting language: Nushell
+- Editor: Neovim
+- Terminal: WezTerm
+Usage
+(External Editor Relive) "Preferences"/\"Essential".
+- "Shell".sh.
+  -Command template nu.$.{CLONE_DIR}/edit.nu "/path/.to/temp.eml"
