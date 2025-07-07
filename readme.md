@@ -9,7 +9,7 @@ To install:
 ## Requirements
 - Scripting language: *Nushell*
 - Editor: *Neovim*
-- Terminal: *WezTerm*
+- Terminal: *Ghostty*
 
 ## Usage
 *External Editor Revived* -> `Preferences` -> `Essential`:

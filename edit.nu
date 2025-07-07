@@ -93,9 +93,7 @@ def main [path: string] {
   }
   $contents_md | save --force $path
 
-  wezterm cli spawn --new-window -- /usr/bin/nvim $path
-  let pid = pgrep --newest --full '^/usr/bin/nvim /tmp/.+\.eml$'
-  tail --pid $pid --follow /dev/null
+  ghostty --command=$'/usr/bin/nvim ($path)'
 
   mut eml = split_eml $path
   if $reply_html != '' {
