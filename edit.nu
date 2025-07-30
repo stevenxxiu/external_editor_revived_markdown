@@ -93,7 +93,10 @@ def main [path: string] {
   }
   $contents_md | save --force $path
 
-  ghostty --command=$'/usr/bin/nvim ($path)'
+  let vim_win = 'external-editor-revived'
+  with-env { VIM_WIN: $vim_win } { nvim $path }
+  let tty = (cat /sys/devices/virtual/tty/tty0/active)
+  inotifywait --event delete --include $'nvimsocket-($tty)-(whoami)-($vim_win)' /tmp/
 
   mut eml = split_eml $path
   if $reply_html != '' {
