@@ -82,14 +82,16 @@ def main [path: string] {
   } else if $eml_split_reply.rest != null {
     $body_md = $eml_split_reply.body | html_to_md
     $reply_html = $eml_split_reply.rest
+  } else {
+    $body_md = $eml_split_reply.body | html_to_md
   }
 
   mut contents_md = $"($eml.headers)\n\n($body_md)"
-  if $reply_html != '' {
+  if $forwarded_md != '' {
+    $contents_md = $"($contents_md)\n\n($MD_FORWARDED_PREFIX)\n\n($forwarded_md)"
+  } else if $reply_html != '' {
     let reply_md = $reply_html | html_to_md
     $contents_md = $"($contents_md)\n\n($MD_REPLY_PREFIX)\n\n($reply_md)"
-  } else if $forwarded_md != '' {
-    $contents_md = $"($contents_md)\n\n($MD_FORWARDED_PREFIX)\n\n($forwarded_md)"
   }
   $contents_md | save --force $path
 
